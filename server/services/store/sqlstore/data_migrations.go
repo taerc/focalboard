@@ -2,6 +2,8 @@ package sqlstore
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -176,7 +178,8 @@ func (s *SQLStore) RunFixCollationsAndCharsetsMigration() error {
 	}
 
 	// get collation and charSet setting that Channels is using.
-	// when personal server or unit testing, no channels tables exist so just set to a default.
+	// when personal server or unit testing, no channels tables exist
+	// so just set to a default.
 	var collation string
 	var charSet string
 	var err error
@@ -186,7 +189,14 @@ func (s *SQLStore) RunFixCollationsAndCharsetsMigration() error {
 	} else {
 		collation, charSet, err = s.getCollationAndCharset("Channels")
 		if err != nil {
-			return err
+			if errors.Is(err, sql.ErrNoRows) {
+				// Channels table doesn't exist (personal server mode),
+				// fall back to default collation and charset
+				collation = "utf8mb4_general_ci"
+				charSet = "utf8mb4"
+			} else {
+				return err
+			}
 		}
 	}
 
