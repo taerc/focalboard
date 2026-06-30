@@ -22,6 +22,7 @@ import (
 	"github.com/mattermost/focalboard/server/services/config"
 	"github.com/mattermost/focalboard/server/services/metrics"
 	"github.com/mattermost/focalboard/server/services/notify"
+	"github.com/mattermost/focalboard/server/services/notify/notifydd"
 	"github.com/mattermost/focalboard/server/services/notify/notifylogger"
 	"github.com/mattermost/focalboard/server/services/scheduler"
 	"github.com/mattermost/focalboard/server/services/store"
@@ -124,7 +125,7 @@ func New(params Params) (*Server, error) {
 	}
 
 	// Init notification services
-	notificationService, errNotify := initNotificationService(params.NotifyBackends, params.Logger)
+	notificationService, errNotify := initNotificationService(params.NotifyBackends, params.Logger, params.DBStore)
 	if errNotify != nil {
 		return nil, fmt.Errorf("cannot initialize notification service(s): %w", errNotify)
 	}
@@ -512,10 +513,12 @@ func initTelemetry(opts telemetryOptions) *telemetry.Service {
 	return telemetryService
 }
 
-func initNotificationService(backends []notify.Backend, logger mlog.LoggerIFace) (*notify.Service, error) {
+func initNotificationService(backends []notify.Backend, logger mlog.LoggerIFace, dbStore store.Store) (*notify.Service, error) {
 	loggerBackend := notifylogger.New(logger, mlog.LvlDebug)
-
 	backends = append(backends, loggerBackend)
+
+	ddBackend := notifydd.New(logger, mlog.LvlDebug, dbStore)
+	backends = append(backends, ddBackend)
 
 	service, err := notify.New(logger, backends...)
 	return service, err
