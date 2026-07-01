@@ -5,7 +5,10 @@ package notifydd
 
 import (
 	"fmt"
+	"hash/fnv"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/mattermost/focalboard/server/services/notify"
 	"github.com/mattermost/focalboard/server/services/store"
@@ -14,14 +17,17 @@ import (
 )
 
 const (
-	backendName = "notifyDD"
+	backendName   = "notifyDD"
+	dedupInterval = 5 * time.Minute
 )
 
 type Backend struct {
-	logger mlog.LoggerIFace
-	level  mlog.Level
-	store  store.Store
-	robot  Robot
+	logger   mlog.LoggerIFace
+	level    mlog.Level
+	store    store.Store
+	robot    Robot
+	msgQueue map[uint64]time.Time
+	mu       sync.Mutex
 }
 
 func New(logger mlog.LoggerIFace, level mlog.Level, store store.Store) *Backend {
@@ -30,11 +36,39 @@ func New(logger mlog.LoggerIFace, level mlog.Level, store store.Store) *Backend 
 		Secret:      os.Getenv("MM_BOARDS_DINGTALK_SECRET"),
 	}
 	return &Backend{
-		logger: logger,
-		level:  level,
-		store:  store,
-		robot:  robot,
+		logger:   logger,
+		level:    level,
+		store:    store,
+		robot:    robot,
+		msgQueue: make(map[uint64]time.Time),
 	}
+}
+
+// shouldSend 检查消息是否应该发送。
+// 5 分钟内相同的消息只发送一次，超过 5 分钟的记录自动清理。
+func (b *Backend) shouldSend(msg string) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	now := time.Now()
+	// 清理超过 5 分钟的记录
+	for key, ts := range b.msgQueue {
+		if now.Sub(ts) >= dedupInterval {
+			delete(b.msgQueue, key)
+		}
+	}
+
+	// 使用消息哈希作为 key，避免存储完整消息内容
+	h := fnv.New64a()
+	h.Write([]byte(msg))
+	key := h.Sum64()
+
+	if _, exists := b.msgQueue[key]; exists {
+		return false
+	}
+
+	b.msgQueue[key] = now
+	return true
 }
 
 func (b *Backend) Start() error {
@@ -84,8 +118,8 @@ func (b *Backend) BlockChanged(evt notify.BlockChangeEvent) error {
 	msg := fmt.Sprintf("%s 在 %s %s %s", who, board, actionVerb, card)
 	b.logger.Log(b.level, msg)
 
-	// 推送到钉钉机器人
-	if b.robot.AccessToken != "" {
+	// 推送到钉钉机器人（5 分钟内相同的消息不重复推送）
+	if b.robot.AccessToken != "" && b.shouldSend(msg) {
 		webhook := b.robot.Signature()
 		payload := b.robot.SendText(msg, nil, nil, false)
 		SendRequest(webhook, payload)
