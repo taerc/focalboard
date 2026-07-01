@@ -9,19 +9,24 @@ import {Constants, Permission} from '../../constants'
 import {IPropertyOption, IPropertyTemplate, Board, BoardGroup} from '../../blocks/board'
 import {BoardView} from '../../blocks/boardView'
 import {Card} from '../../blocks/card'
+import {MarkdownExporter} from '../../markdownExporter'
+import {Utils} from '../../utils'
 import mutator from '../../mutator'
 import IconButton from '../../widgets/buttons/iconButton'
 import AddIcon from '../../widgets/icons/add'
 import DeleteIcon from '../../widgets/icons/delete'
 import HideIcon from '../../widgets/icons/hide'
 import OptionsIcon from '../../widgets/icons/options'
+import CompassIcon from '../../widgets/icons/compassIcon'
 import Menu from '../../widgets/menu'
 import MenuWrapper from '../../widgets/menuWrapper'
 import Editable from '../../widgets/editable'
 import Label from '../../widgets/label'
 import {useHasCurrentBoardPermissions} from '../../hooks/permissions'
+import {useAppSelector} from '../../store/hooks'
 
 import BoardPermissionGate from '../permissions/boardPermissionGate'
+import {sendFlashMessage} from '../flashMessages'
 
 import {KanbanCalculation} from './calculation/calculation'
 
@@ -50,6 +55,8 @@ export default function KanbanColumnHeader(props: Props): JSX.Element {
     const [groupTitle, setGroupTitle] = useState(group.option.value)
     const canEditBoardProperties = useHasCurrentBoardPermissions([Permission.ManageBoardProperties])
     const canEditOption = groupByProperty?.type !== 'person' && group.option.id
+    const commentsByCard = useAppSelector((state) => state.comments?.commentsByCard || {})
+    const usersById = useAppSelector((state) => state.users?.boardUsers || {})
 
     const headerRef = useRef<HTMLDivElement>(null)
 
@@ -86,6 +93,23 @@ export default function KanbanColumnHeader(props: Props): JSX.Element {
     const groupCalculation = props.activeView.fields.kanbanCalculations[props.group.option.id]
     const calculationValue = groupCalculation ? groupCalculation.calculation : defaultCalculation
     const calculationProperty = groupCalculation ? props.board.cardProperties.find((property) => property.id === groupCalculation.propertyId) || defaultProperty : defaultProperty
+
+    const onExportMarkdown = () => {
+        try {
+            MarkdownExporter.exportColumnMarkdown(board, activeView, group, groupByProperty, commentsByCard, usersById, intl)
+            sendFlashMessage({
+                content: intl.formatMessage({id: 'ViewHeader.export-complete', defaultMessage: 'Export complete!'}),
+                severity: 'normal',
+            })
+        } catch (e) {
+            Utils.logError(`ExportMarkdown ERROR: ${e}`)
+            sendFlashMessage({
+                content: intl.formatMessage({id: 'ViewHeader.export-failed', defaultMessage: 'Export failed!'}),
+                severity: 'high',
+            })
+        }
+    }
+
     return (
         <div
             key={group.option.id || 'empty'}
@@ -160,37 +184,44 @@ export default function KanbanColumnHeader(props: Props): JSX.Element {
             <div className='octo-spacer'/>
             {!props.readonly &&
                 <>
-                    <BoardPermissionGate permissions={[Permission.ManageBoardProperties]}>
-                        <MenuWrapper>
-                            <IconButton icon={<OptionsIcon/>}/>
-                            <Menu>
-                                <Menu.Text
-                                    id='hide'
-                                    icon={<HideIcon/>}
-                                    name={intl.formatMessage({id: 'BoardComponent.hide', defaultMessage: 'Hide'})}
-                                    onClick={() => mutator.hideViewColumn(board.id, activeView, group.option.id || '')}
-                                />
-                                {canEditOption &&
-                                    <>
-                                        <Menu.Text
-                                            id='delete'
-                                            icon={<DeleteIcon/>}
-                                            name={intl.formatMessage({id: 'BoardComponent.delete', defaultMessage: 'Delete'})}
-                                            onClick={() => mutator.deletePropertyOption(board.id, board.cardProperties, groupByProperty!, group.option)}
-                                        />
-                                        <Menu.Separator/>
-                                        {Object.entries(Constants.menuColors).map(([key, color]) => (
-                                            <Menu.Color
-                                                key={key}
-                                                id={key}
-                                                name={color}
-                                                onClick={() => mutator.changePropertyOptionColor(board.id, board.cardProperties, groupByProperty!, group.option, key)}
+                    <MenuWrapper>
+                        <IconButton icon={<OptionsIcon/>}/>
+                        <Menu>
+                            <Menu.Text
+                                id='exportMarkdown'
+                                name={intl.formatMessage({id: 'KanbanColumnHeader.export-markdown', defaultMessage: 'Export to Markdown'})}
+                                icon={<CompassIcon icon='export-variant'/>}
+                                onClick={onExportMarkdown}
+                            />
+                            {canEditBoardProperties &&
+                                <>
+                                    <Menu.Text
+                                        id='hide'
+                                        icon={<HideIcon/>}
+                                        name={intl.formatMessage({id: 'BoardComponent.hide', defaultMessage: 'Hide'})}
+                                        onClick={() => mutator.hideViewColumn(board.id, activeView, group.option.id || '')}
+                                    />
+                                    {canEditOption &&
+                                        <>
+                                            <Menu.Text
+                                                id='delete'
+                                                icon={<DeleteIcon/>}
+                                                name={intl.formatMessage({id: 'BoardComponent.delete', defaultMessage: 'Delete'})}
+                                                onClick={() => mutator.deletePropertyOption(board.id, board.cardProperties, groupByProperty!, group.option)}
                                             />
-                                        ))}
-                                    </>}
-                            </Menu>
-                        </MenuWrapper>
-                    </BoardPermissionGate>
+                                            <Menu.Separator/>
+                                            {Object.entries(Constants.menuColors).map(([key, color]) => (
+                                                <Menu.Color
+                                                    key={key}
+                                                    id={key}
+                                                    name={color}
+                                                    onClick={() => mutator.changePropertyOptionColor(board.id, board.cardProperties, groupByProperty!, group.option, key)}
+                                                />
+                                            ))}
+                                        </>}
+                                </>}
+                        </Menu>
+                    </MenuWrapper>
                     <BoardPermissionGate permissions={[Permission.ManageBoardCards]}>
                         <IconButton
                             icon={<AddIcon/>}

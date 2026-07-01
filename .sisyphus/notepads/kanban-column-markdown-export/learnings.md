@@ -28,3 +28,22 @@
 - `webapp/src/markdownExporter.test.ts` — 5 tests across 2 describe blocks, all passing
 - Tests: `npx jest src/markdownExporter.test.ts --verbose --coverage=false` — 5/5 pass
 - Lint: `npx eslint --ext .ts src/markdownExporter.ts src/markdownExporter.test.ts` — clean
+
+## Task 3: kanbanColumnHeader.tsx — Menu wiring
+
+### Changes Made
+- Added imports: `MarkdownExporter`, `Utils`, `CompassIcon`, `useAppSelector`, `sendFlashMessage`
+- Added `commentsByCard` and `usersById` Redux selectors at top level (React Hooks rules — never inside JSX loops)
+- Added `onExportMarkdown` handler with try/catch + `sendFlashMessage` (same pattern as `viewHeaderActionsMenu.tsx:onExportCsvTrigger`)
+- Restructured `...` menu: removed `BoardPermissionGate` wrapper so ALL logged-in users see the menu; Export item is unconditional; Hide/Delete/Color gated by `canEditBoardProperties` boolean instead of `BoardPermissionGate` component
+- Add button's `BoardPermissionGate permissions={[Permission.ManageBoardCards]}` left unchanged
+
+### Key Decisions
+- **Permission gating change**: Originally the entire `MenuWrapper` (the `...` button) was wrapped in `BoardPermissionGate permissions={[Permission.ManageBoardProperties]}`, meaning non-admin users couldn't see the menu at all. Now the menu is always visible, with edit operations gated by the `canEditBoardProperties` boolean (already computed via `useHasCurrentBoardPermissions`).
+- **CompassIcon**: Used `<CompassIcon icon='export-variant'/>` for the export menu item icon — same pattern as `sidebarBoardItem.tsx`.
+- **i18n keys**: `KanbanColumnHeader.export-markdown` (new, from Task 2), `ViewHeader.export-complete` / `ViewHeader.export-failed` (existing, shared with CSV export).
+- **Import order**: `import/order` eslint rule with `newlines-between: always-and-inside-groups` — groups: builtin, external, internal+parent, sibling, index. No `alphabetize` option, so within-group order is flexible.
+
+### Verification
+- ESLint: `npx eslint --ext .tsx src/components/kanban/kanbanColumnHeader.tsx` — clean (0 errors)
+- File grew from 206 to 237 lines

@@ -315,7 +315,7 @@ Wave FINAL (After ALL tasks):
 
 ---
 
-- [ ] 3. Wire Export Menu into KanbanColumnHeader
+- [x] 3. Wire Export Menu into KanbanColumnHeader
 
   **What to do**:
   - 修改 `webapp/src/components/kanban/kanbanColumnHeader.tsx`
