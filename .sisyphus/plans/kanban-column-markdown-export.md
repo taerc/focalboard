@@ -473,15 +473,15 @@ Wave FINAL (After ALL tasks):
 
 > 3 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Read the plan end-to-end. For each "Must Have": verify implementation exists (read file, run command). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Check evidence files exist in .sisyphus/evidence/. Compare deliverables against plan.
   Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   Run `cd webapp && npm run check` (ESLint + Stylelint). Run `cd webapp && npm run test` (jest). Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic names.
   Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | Files [N clean/N issues] | VERDICT`
 
-- [ ] F3. **Real Manual QA** — `unspecified-high` (+ `webapp-testing` skill)
+- [x] F3. **Real Manual QA** — `unspecified-high` (+ `webapp-testing` skill)
   Start Focalboard server (`./bin/focalboard-server`). Open browser to http://localhost:8000. Navigate to a Kanban board. Hover over a column header. Click `...` menu. Verify "Export to Markdown" appears. Click it. Verify `.md` file downloads. Open the file and verify: board title, column title, card titles, properties, comments all present. Test with empty column. Test with card that has no comments.
   Output: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
 
