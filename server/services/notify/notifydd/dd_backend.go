@@ -105,12 +105,12 @@ func (b *Backend) BlockChanged(evt notify.BlockChangeEvent) error {
 		}
 	}
 
-	actionVerb := "操作"
+	actionVerb := "编辑"
 	switch evt.Action {
 	case notify.Add:
-		actionVerb = "新增"
+		actionVerb = "编辑"
 	case notify.Update:
-		actionVerb = "更新"
+		actionVerb = "编辑"
 	case notify.Delete:
 		actionVerb = "删除"
 	}
