@@ -169,6 +169,61 @@ describe('MarkdownExporter', () => {
         })
     })
 
+    describe('exportCardMarkdown', () => {
+        test('should export single card with properties and comments', () => {
+            const board = makeBoard()
+            const view = makeView(board)
+            const card = makeCard('card-1', 'Task A', {'prop-status': 'Todo', 'prop-priority': 'High'})
+            const comment1 = makeComment('cmt-1', 'Looks good', 'user-1', 1705312800000)
+            const commentsByCard: {[cardId: string]: CommentBlock[]} = {
+                'card-1': [comment1],
+            }
+            const usersById: {[userId: string]: IUser} = {
+                'user-1': makeUser('user-1', 'alice'),
+            }
+
+            MarkdownExporter.exportCardMarkdown(board, view, card, commentsByCard, usersById, intl)
+
+            expect(capturedMarkdown).toContain('# 📊 Project Board')
+            expect(capturedMarkdown).toContain('## i Task A')
+            expect(capturedMarkdown).toContain('**Properties:**')
+            expect(capturedMarkdown).toContain('- Status: Todo')
+            expect(capturedMarkdown).toContain('- Priority: High')
+            expect(capturedMarkdown).toContain('**Comments:**')
+            const expectedDate = new Date(1705312800000).toLocaleDateString()
+            expect(capturedMarkdown).toContain(`- *alice - ${expectedDate}*: Looks good`)
+            expect(capturedMarkdown).toContain('*Exported from Focalboard on')
+            // Should NOT contain column header
+            expect(capturedMarkdown).not.toContain('> **Column**:')
+        })
+
+        test('should not include comments section when card has no comments', () => {
+            const board = makeBoard()
+            const view = makeView(board)
+            const card = makeCard('card-1', 'Task A', {'prop-status': 'Todo', 'prop-priority': 'High'})
+
+            MarkdownExporter.exportCardMarkdown(board, view, card, {}, {}, intl)
+
+            expect(capturedMarkdown).toContain('## i Task A')
+            expect(capturedMarkdown).toContain('**Properties:**')
+            expect(capturedMarkdown).toContain('- Status: Todo')
+            expect(capturedMarkdown).not.toContain('**Comments:**')
+        })
+
+        test('should not include properties section when no visible properties', () => {
+            const board = makeBoard()
+            const view = makeView(board)
+            view.fields.visiblePropertyIds = []
+            const card = makeCard('card-1', 'Task A', {'prop-status': 'Todo', 'prop-priority': 'High'})
+
+            MarkdownExporter.exportCardMarkdown(board, view, card, {}, {}, intl)
+
+            expect(capturedMarkdown).toContain('## i Task A')
+            expect(capturedMarkdown).not.toContain('**Properties:**')
+            expect(capturedMarkdown).not.toContain('- Status:')
+        })
+    })
+
     describe('escapeMarkdown', () => {
         test('should escape special markdown characters', () => {
             expect(Internals.escapeMarkdown('*bold*')).toBe('\\*bold\\*')

@@ -38,6 +38,32 @@ class MarkdownExporter {
         document.body.removeChild(link)
     }
 
+    static exportCardMarkdown(
+        board: Board,
+        activeView: BoardView,
+        card: Card,
+        commentsByCard: {[cardId: string]: CommentBlock[]},
+        usersById: {[userId: string]: IUser},
+        intl: IntlShape,
+    ): void {
+        const markdown = MarkdownExporter.generateCardMarkdown(board, activeView, card, commentsByCard, usersById, intl)
+
+        const blob = new Blob([markdown], {type: 'text/markdown;charset=utf-8'})
+        const url = URL.createObjectURL(blob)
+
+        const filename = `${Utils.sanitizeFilename(`${board.title}-${card.title || 'Untitled'}`)}.md`
+        const link = document.createElement('a')
+        link.style.display = 'none'
+        link.setAttribute('href', url)
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+
+        link.click()
+
+        URL.revokeObjectURL(url)
+        document.body.removeChild(link)
+    }
+
     private static generateMarkdown(
         board: Board,
         activeView: BoardView,
@@ -88,6 +114,53 @@ class MarkdownExporter {
         })
 
         const exportDate = new Date().toLocaleDateString()
+        lines.push(`*Exported from Focalboard on ${exportDate}*`)
+
+        return lines.join('\n')
+    }
+
+    private static generateCardMarkdown(
+        board: Board,
+        activeView: BoardView,
+        card: Card,
+        commentsByCard: {[cardId: string]: CommentBlock[]},
+        usersById: {[userId: string]: IUser},
+        intl: IntlShape,
+    ): string {
+        const lines: string[] = []
+        const boardIcon = board.icon || ''
+        const boardTitle = MarkdownExporter.escapeMarkdown(board.title || 'Untitled')
+
+        lines.push(`# ${boardIcon} ${boardTitle}`)
+        lines.push('')
+
+        const cardIcon = card.fields.icon || ''
+        const cardTitle = MarkdownExporter.escapeMarkdown(card.title || 'Untitled')
+        lines.push(`## ${cardIcon} ${cardTitle}`)
+        lines.push('')
+
+        const visibleProperties = board.cardProperties.filter((template: IPropertyTemplate) =>
+            activeView.fields.visiblePropertyIds.includes(template.id),
+        )
+
+        if (visibleProperties.length > 0) {
+            lines.push('**Properties:**')
+            visibleProperties.forEach((template: IPropertyTemplate) => {
+                const propertyName = MarkdownExporter.escapeMarkdown(template.name)
+                const propertyValue = MarkdownExporter.formatPropertyValue(card.fields.properties[template.id], template, card, intl)
+                lines.push(`- ${propertyName}: ${propertyValue}`)
+            })
+            lines.push('')
+        }
+
+        const commentsSection = MarkdownExporter.formatComments(card.id, commentsByCard, usersById)
+        if (commentsSection) {
+            lines.push(commentsSection)
+            lines.push('')
+        }
+
+        const exportDate = new Date().toLocaleDateString()
+        lines.push('---')
         lines.push(`*Exported from Focalboard on ${exportDate}*`)
 
         return lines.join('\n')
