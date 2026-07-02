@@ -115,7 +115,6 @@ const KanbanCard = (props: Props) => {
                 style={{opacity: isDragging ? 0.5 : 1}}
                 onClick={handleOnClick}
             >
-                {!props.readonly &&
                 <MenuWrapper
                     className={'optionsMenu'}
                     stopPropagationOnToggle={true}
@@ -151,7 +150,6 @@ const KanbanCard = (props: Props) => {
                         />
                     </CardActionsMenu>
                 </MenuWrapper>
-                }
 
                 <div className='octo-icontitle'>
                     { card.fields.icon ? <div className='octo-icon'>{card.fields.icon}</div> : undefined }

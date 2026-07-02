@@ -690,6 +690,19 @@ exports[`src/components/kanban/kanbanCard should match snapshot with readonly 1`
     style="opacity: 1;"
   >
     <div
+      aria-label="menuwrapper"
+      class="MenuWrapper optionsMenu"
+      role="button"
+    >
+      <button
+        type="button"
+      >
+        <i
+          class="CompassIcon icon-dots-horizontal OptionsIcon"
+        />
+      </button>
+    </div>
+    <div
       class="octo-icontitle"
     >
       <div
