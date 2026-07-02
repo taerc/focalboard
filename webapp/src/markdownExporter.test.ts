@@ -193,6 +193,7 @@ describe('MarkdownExporter', () => {
             const expectedDate = new Date(1705312800000).toLocaleDateString()
             expect(capturedMarkdown).toContain(`- *alice - ${expectedDate}*: Looks good`)
             expect(capturedMarkdown).toContain('*Exported from Focalboard on')
+
             // Should NOT contain column header
             expect(capturedMarkdown).not.toContain('> **Column**:')
         })

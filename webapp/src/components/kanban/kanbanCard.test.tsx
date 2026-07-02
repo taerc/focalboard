@@ -16,6 +16,7 @@ import {Utils} from '../../utils'
 
 import {TestBlockFactory} from '../../test/testBlockFactory'
 import {IPropertyTemplate} from '../../blocks/board'
+import {createBoardView} from '../../blocks/boardView'
 import {mockStateStore, wrapDNDIntl} from '../../testUtils'
 
 import KanbanCard from './kanbanCard'
@@ -46,6 +47,7 @@ describe('src/components/kanban/kanbanCard', () => {
             },
         ],
     }
+    const view = createBoardView()
     const state = {
         cards: {
             cards: [card],
@@ -81,6 +83,7 @@ describe('src/components/kanban/kanbanCard', () => {
                 <KanbanCard
                     card={card}
                     board={board}
+                    activeView={view}
                     visiblePropertyTemplates={[propertyTemplate]}
                     visibleBadges={false}
                     isSelected={false}
@@ -99,6 +102,7 @@ describe('src/components/kanban/kanbanCard', () => {
                 <KanbanCard
                     card={card}
                     board={board}
+                    activeView={view}
                     visiblePropertyTemplates={[propertyTemplate]}
                     visibleBadges={false}
                     isSelected={false}
@@ -117,6 +121,7 @@ describe('src/components/kanban/kanbanCard', () => {
                 <KanbanCard
                     card={card}
                     board={board}
+                    activeView={view}
                     visiblePropertyTemplates={[propertyTemplate]}
                     visibleBadges={false}
                     isSelected={false}
@@ -153,6 +158,7 @@ describe('src/components/kanban/kanbanCard', () => {
                 <KanbanCard
                     card={card}
                     board={board}
+                    activeView={view}
                     visiblePropertyTemplates={[propertyTemplate]}
                     visibleBadges={false}
                     isSelected={false}
@@ -179,6 +185,7 @@ describe('src/components/kanban/kanbanCard', () => {
                 <KanbanCard
                     card={card}
                     board={board}
+                    activeView={view}
                     visiblePropertyTemplates={[propertyTemplate]}
                     visibleBadges={false}
                     isSelected={false}

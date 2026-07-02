@@ -119,7 +119,37 @@ exports[`src/components/kanban/kanbanCard return kanbanCard and click on copy li
                 />
               </div>
             </div>
-            <div />
+            <div>
+              <div
+                aria-label="Export to Markdown"
+                class="MenuOption TextOption menu-option"
+                role="button"
+              >
+                <div
+                  class="d-flex"
+                >
+                  <div
+                    class="menu-option__icon"
+                  >
+                    <i
+                      class="CompassIcon icon-export-variant"
+                    />
+                  </div>
+                </div>
+                <div
+                  class="menu-option__content"
+                >
+                  <div
+                    class="menu-name"
+                  >
+                    Export to Markdown
+                  </div>
+                </div>
+                <div
+                  class="noicon"
+                />
+              </div>
+            </div>
           </div>
           <div
             class="menu-spacer hideOnWidescreen"
@@ -301,7 +331,37 @@ exports[`src/components/kanban/kanbanCard return kanbanCard and click on delete 
                 />
               </div>
             </div>
-            <div />
+            <div>
+              <div
+                aria-label="Export to Markdown"
+                class="MenuOption TextOption menu-option"
+                role="button"
+              >
+                <div
+                  class="d-flex"
+                >
+                  <div
+                    class="menu-option__icon"
+                  >
+                    <i
+                      class="CompassIcon icon-export-variant"
+                    />
+                  </div>
+                </div>
+                <div
+                  class="menu-option__content"
+                >
+                  <div
+                    class="menu-name"
+                  >
+                    Export to Markdown
+                  </div>
+                </div>
+                <div
+                  class="noicon"
+                />
+              </div>
+            </div>
           </div>
           <div
             class="menu-spacer hideOnWidescreen"
@@ -483,7 +543,37 @@ exports[`src/components/kanban/kanbanCard return kanbanCard and click on duplica
                 />
               </div>
             </div>
-            <div />
+            <div>
+              <div
+                aria-label="Export to Markdown"
+                class="MenuOption TextOption menu-option"
+                role="button"
+              >
+                <div
+                  class="d-flex"
+                >
+                  <div
+                    class="menu-option__icon"
+                  >
+                    <i
+                      class="CompassIcon icon-export-variant"
+                    />
+                  </div>
+                </div>
+                <div
+                  class="menu-option__content"
+                >
+                  <div
+                    class="menu-name"
+                  >
+                    Export to Markdown
+                  </div>
+                </div>
+                <div
+                  class="noicon"
+                />
+              </div>
+            </div>
           </div>
           <div
             class="menu-spacer hideOnWidescreen"

@@ -4,15 +4,21 @@ import React, {useState, useCallback, useMemo} from 'react'
 import {useIntl} from 'react-intl'
 
 import {Board, IPropertyTemplate} from '../../blocks/board'
+import {BoardView} from '../../blocks/boardView'
 import {Card} from '../../blocks/card'
 import {useSortable} from '../../hooks/sortable'
+import {MarkdownExporter} from '../../markdownExporter'
 import mutator from '../../mutator'
+import {useAppSelector} from '../../store/hooks'
 import TelemetryClient, {TelemetryActions, TelemetryCategory} from '../../telemetry/telemetryClient'
 import {Utils} from '../../utils'
+import CompassIcon from '../../widgets/icons/compassIcon'
+import Menu from '../../widgets/menu'
 import MenuWrapper from '../../widgets/menuWrapper'
 import Tooltip from '../../widgets/tooltip'
-import PropertyValueElement from '../propertyValueElement'
 import ConfirmationDialogBox, {ConfirmationDialogBoxProps} from '../confirmationDialogBox'
+import {sendFlashMessage} from '../flashMessages'
+import PropertyValueElement from '../propertyValueElement'
 import './kanbanCard.scss'
 import CardBadges from '../cardBadges'
 import CardActionsMenu from '../cardActionsMenu/cardActionsMenu'
@@ -23,6 +29,7 @@ export const OnboardingCardClassName = 'onboardingCard'
 type Props = {
     card: Card
     board: Board
+    activeView: BoardView
     visiblePropertyTemplates: IPropertyTemplate[]
     isSelected: boolean
     visibleBadges: boolean
@@ -36,6 +43,8 @@ type Props = {
 const KanbanCard = (props: Props) => {
     const {card, board} = props
     const intl = useIntl()
+    const commentsByCard = useAppSelector((state) => state.comments?.commentsByCard || {})
+    const usersById = useAppSelector((state) => state.users?.boardUsers || {})
     const [isDragging, isOver, cardRef] = useSortable('card', card, !props.readonly, props.onDrop)
     const visiblePropertyTemplates = props.visiblePropertyTemplates || []
     let className = props.isSelected ? 'KanbanCard selected' : 'KanbanCard'
@@ -81,6 +90,22 @@ const KanbanCard = (props: Props) => {
         }
     }, [props.onClick, card])
 
+    const onExportMarkdown = useCallback(() => {
+        try {
+            MarkdownExporter.exportCardMarkdown(board, props.activeView, card, commentsByCard, usersById, intl)
+            sendFlashMessage({
+                content: intl.formatMessage({id: 'ViewHeader.export-complete', defaultMessage: 'Export complete!'}),
+                severity: 'normal',
+            })
+        } catch (e) {
+            Utils.logError(`ExportMarkdown ERROR: ${e}`)
+            sendFlashMessage({
+                content: intl.formatMessage({id: 'ViewHeader.export-failed', defaultMessage: 'Export failed!'}),
+                severity: 'high',
+            })
+        }
+    }, [board, props.activeView, card, commentsByCard, usersById, intl])
+
     return (
         <>
             <div
@@ -117,7 +142,14 @@ const KanbanCard = (props: Props) => {
                                 },
                             )
                         }}
-                    />
+                    >
+                        <Menu.Text
+                            id='exportMarkdown'
+                            name={intl.formatMessage({id: 'KanbanCard.export-markdown', defaultMessage: 'Export to Markdown'})}
+                            icon={<CompassIcon icon='export-variant'/>}
+                            onClick={onExportMarkdown}
+                        />
+                    </CardActionsMenu>
                 </MenuWrapper>
                 }
 

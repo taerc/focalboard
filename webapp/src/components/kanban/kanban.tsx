@@ -291,6 +291,7 @@ const Kanban = (props: Props) => {
                             <KanbanCard
                                 card={card}
                                 board={board}
+                                activeView={activeView}
                                 visiblePropertyTemplates={visiblePropertyTemplates}
                                 visibleBadges={visibleBadges}
                                 key={card.id}
