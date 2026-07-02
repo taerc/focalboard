@@ -5,8 +5,8 @@ package notifydd
 
 import (
 	"fmt"
-	"hash/fnv"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,16 +18,30 @@ import (
 
 const (
 	backendName   = "notifyDD"
-	dedupInterval = 5 * time.Minute
+	batchInterval = 5 * time.Minute
 )
 
+type entry struct {
+	board  string
+	card   string
+	action string
+}
+
+type userBuffer struct {
+	username string
+	entries  []entry
+	seen     map[string]bool
+}
+
 type Backend struct {
-	logger   mlog.LoggerIFace
-	level    mlog.Level
-	store    store.Store
-	robot    Robot
-	msgQueue map[uint64]time.Time
-	mu       sync.Mutex
+	logger      mlog.LoggerIFace
+	level       mlog.Level
+	store       store.Store
+	robot       Robot
+	buffers     map[string]*userBuffer
+	flushTicker *time.Ticker
+	done        chan struct{}
+	mu          sync.Mutex
 }
 
 func New(logger mlog.LoggerIFace, level mlog.Level, store store.Store) *Backend {
@@ -36,46 +50,36 @@ func New(logger mlog.LoggerIFace, level mlog.Level, store store.Store) *Backend 
 		Secret:      os.Getenv("MM_BOARDS_DINGTALK_SECRET"),
 	}
 	return &Backend{
-		logger:   logger,
-		level:    level,
-		store:    store,
-		robot:    robot,
-		msgQueue: make(map[uint64]time.Time),
+		logger:  logger,
+		level:   level,
+		store:   store,
+		robot:   robot,
+		buffers: make(map[string]*userBuffer),
+		done:    make(chan struct{}),
 	}
-}
-
-// shouldSend 检查消息是否应该发送。
-// 5 分钟内相同的消息只发送一次，超过 5 分钟的记录自动清理。
-func (b *Backend) shouldSend(msg string) bool {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	now := time.Now()
-	// 清理超过 5 分钟的记录
-	for key, ts := range b.msgQueue {
-		if now.Sub(ts) >= dedupInterval {
-			delete(b.msgQueue, key)
-		}
-	}
-
-	// 使用消息哈希作为 key，避免存储完整消息内容
-	h := fnv.New64a()
-	h.Write([]byte(msg))
-	key := h.Sum64()
-
-	if _, exists := b.msgQueue[key]; exists {
-		return false
-	}
-
-	b.msgQueue[key] = now
-	return true
 }
 
 func (b *Backend) Start() error {
+	b.flushTicker = time.NewTicker(batchInterval)
+	go func() {
+		for {
+			select {
+			case <-b.flushTicker.C:
+				b.flushAll()
+			case <-b.done:
+				return
+			}
+		}
+	}()
 	return nil
 }
 
 func (b *Backend) ShutDown() error {
+	close(b.done)
+	if b.flushTicker != nil {
+		b.flushTicker.Stop()
+	}
+	b.flushAll()
 	_ = b.logger.Flush()
 	return nil
 }
@@ -115,17 +119,71 @@ func (b *Backend) BlockChanged(evt notify.BlockChangeEvent) error {
 		actionVerb = "删除"
 	}
 
-	msg := fmt.Sprintf("%s 在 %s %s %s", who, board, actionVerb, card)
-	b.logger.Log(b.level, msg)
+	b.logger.Log(b.level, fmt.Sprintf("%s 在 %s %s %s", who, board, actionVerb, card))
+	b.addToBuffer(userID, who, board, card, actionVerb)
 
-	// 推送到钉钉机器人（5 分钟内相同的消息不重复推送）
-	if b.robot.AccessToken != "" && b.shouldSend(msg) {
+	return nil
+}
+
+// addToBuffer 将一条操作记录加入用户的缓冲区。
+// 相同的 看板+card+操作 组合只记录一次。
+func (b *Backend) addToBuffer(userID, username, board, card, action string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	buf, ok := b.buffers[userID]
+	if !ok {
+		buf = &userBuffer{
+			seen: make(map[string]bool),
+		}
+		b.buffers[userID] = buf
+	}
+	buf.username = username
+
+	key := board + "|" + card + "|" + action
+	if buf.seen[key] {
+		return
+	}
+	buf.seen[key] = true
+	buf.entries = append(buf.entries, entry{
+		board:  board,
+		card:   card,
+		action: action,
+	})
+}
+
+// flushAll 将所有用户缓冲区中的条目聚合成消息发送到钉钉，然后清空缓冲区。
+func (b *Backend) flushAll() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.robot.AccessToken == "" {
+		// 机器人未配置，清空缓冲区
+		b.buffers = make(map[string]*userBuffer)
+		return
+	}
+
+	for userID, buf := range b.buffers {
+		if len(buf.entries) == 0 {
+			continue
+		}
+
+		// 构建聚合消息
+		msg := fmt.Sprintf("%s 刚编辑了看板:\n", buf.username)
+		for i, e := range buf.entries {
+			msg += fmt.Sprintf("%d %s了 %s 的 %s\n", i+1, e.action, e.board, e.card)
+		}
+		msg = strings.TrimRight(msg, "\n")
+
 		webhook := b.robot.Signature()
 		payload := b.robot.SendText(msg, nil, nil, false)
 		SendRequest(webhook, payload)
-	}
 
-	return nil
+		// 清空该用户的缓冲区
+		buf.entries = nil
+		buf.seen = make(map[string]bool)
+		delete(b.buffers, userID)
+	}
 }
 
 func (b *Backend) Name() string {
